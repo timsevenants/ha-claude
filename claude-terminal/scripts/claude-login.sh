@@ -1,40 +1,45 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # claude-login.sh
-# Begeleide login voor Claude Code.
+# Begeleide eerste login voor Claude Code, volledig op het scherm.
 #
-# Lost het probleem op dat de login-URL over twee regels afbreekt en dan niet
-# klikbaar is: een achtergrond-watcher leest de volledige URL uit het
-# tmux-venster (regels samengevoegd met -J) en schrijft die op ÉÉN regel naar
-# /config/claude-login-url.txt, zodat je hem foutloos kunt kopiëren.
+# Toont een stap-voor-stap wizard en vangt de login-URL op uit het tmux-venster.
+# Zodra de URL verschijnt, opent een pop-up met een KLIKBARE link (terminal-
+# hyperlink, werkt ook als de URL normaal over twee regels zou afbreken).
+# Geen tekstbestand nodig.
 # ==============================================================================
 set -uo pipefail
 
 SESSION="claude"
-URL_FILE="/config/claude-login-url.txt"
+URL_TMP="/tmp/claude_login_url"
 
-echo
-echo "── Claude Code login ─────────────────────────────────────────────"
-echo
-echo "  Zo dadelijk verschijnt er een login-URL."
-echo "  Als die over twee regels afbreekt en niet goed klikbaar is:"
-echo
-echo "    -> De VOLLEDIGE URL wordt op één regel opgeslagen in:"
-echo "         ${URL_FILE}"
-echo "       Open dat bestand (File editor / Samba), kopieer de URL en"
-echo "       plak hem in je browser."
-echo
-echo "  Na het inloggen toont je browser een code -> plak die hier terug"
-echo "  met rechtermuisklik -> Plakken (of Ctrl+Shift+V)."
-echo "──────────────────────────────────────────────────────────────────"
-echo
-sleep 2
+clear
+cat <<'EOF'
 
-# Verwijder een oude URL zodat je niet per ongeluk een verlopen link kopieert
-rm -f "${URL_FILE}" 2>/dev/null || true
+  ╔══════════════════════════════════════════════════════════════════╗
+  ║   Claude Terminal — eerste keer inloggen                          ║
+  ╚══════════════════════════════════════════════════════════════════╝
+
+  Volg deze stappen (je hoeft niets te onthouden, ze verschijnen ook
+  straks in een venster op je scherm):
+
+    STAP 1  Wacht tot Claude een login-link toont (een paar seconden).
+    STAP 2  Er verschijnt automatisch een VENSTER met een klikbare link.
+            Klik erop — je browser opent met de Anthropic-loginpagina.
+    STAP 3  Log in bij je Anthropic-account en klik op "Authorize".
+    STAP 4  Je browser toont daarna een CODE. Kopieer die code.
+    STAP 5  Sluit het venster (druk op Enter) en PLAK de code terug in
+            de terminal:  rechtermuisklik → Plakken  (of Ctrl+Shift+V).
+
+  Bezig met starten...
+
+EOF
+sleep 3
+
+rm -f "${URL_TMP}" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# Watcher: vist de login-URL uit het tmux-venster en bewaart hem als platte tekst
+# Watcher: vist de login-URL uit het tmux-venster en toont 'm in een pop-up
 # ------------------------------------------------------------------------------
 (
   for _ in $(seq 1 240); do
@@ -44,10 +49,13 @@ rm -f "${URL_FILE}" 2>/dev/null || true
              | grep -iE 'oauth|claude\.ai|anthropic' \
              | head -1 || true)"
       if [ -n "${url:-}" ]; then
-        printf '%s\n' "${url}" > "${URL_FILE}" 2>/dev/null || true
-        tmux display-message -d 0 -t "${SESSION}" \
-          "Login-URL opgeslagen in ${URL_FILE} - open dat bestand om de volledige URL te kopieren" \
-          2>/dev/null || true
+        printf '%s' "${url}" > "${URL_TMP}" 2>/dev/null || true
+        # Eerst proberen als net pop-upvenster; lukt dat niet, dan direct tonen.
+        if ! tmux display-popup -E -w 90% -h 60% "/opt/scripts/login-popup.sh" 2>/dev/null; then
+          printf '\n\n  >>> Login-link (klik of selecteer + kopieer): <<<\n\n'
+          printf '      \033]8;;%s\033\\KLIK HIER OM IN TE LOGGEN\033]8;;\033\\\n\n' "${url}"
+          printf '      %s\n\n' "${url}"
+        fi
         break
       fi
     fi

@@ -12,7 +12,15 @@ Een web-terminal in Home Assistant met de [Claude Code](https://github.com/anthr
 
 ## Eerste keer inloggen
 
-Typ in de terminal `claude` en volg de inloglink om in te loggen met je Anthropic-account (OAuth). De login wordt bewaard in `/data`, dus je hoeft dit maar één keer te doen.
+Bij de eerste start krijg je automatisch een **stap-voor-stap wizard** op het scherm:
+
+1. Claude toont een login-link (paar seconden wachten).
+2. Er verschijnt een **venster met een klikbare link** — klik erop om je browser te openen.
+3. Log in bij je Anthropic-account en klik op **Authorize**.
+4. Kopieer de **code** die je browser toont.
+5. Sluit het venster (Enter) en **plak de code** terug in de terminal (rechtermuisklik → Plakken, of Ctrl+Shift+V).
+
+De login wordt bewaard in `/data`, dus je hoeft dit maar één keer te doen. Opnieuw inloggen kan altijd met het commando `claude-login`.
 
 ## Opties
 
