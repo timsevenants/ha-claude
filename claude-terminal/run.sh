@@ -1,0 +1,66 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Claude Terminal - startscript
+# Start een ttyd web-terminal met de Claude Code CLI erin.
+# Login en config worden in /data bewaard, zodat ze herstarts en updates
+# overleven (/data is het persistente volume van de add-on).
+# ==============================================================================
+set -e
+
+# ------------------------------------------------------------------------------
+# Persistente opslag voor Claude-config en login
+# ------------------------------------------------------------------------------
+export HOME="/data"
+export CLAUDE_CONFIG_DIR="/data/claude-config"
+export XDG_CONFIG_HOME="/data/.config"
+export XDG_DATA_HOME="/data/.local/share"
+export XDG_CACHE_HOME="/data/.cache"
+mkdir -p "${CLAUDE_CONFIG_DIR}" "${XDG_CONFIG_HOME}" "${XDG_DATA_HOME}" "${XDG_CACHE_HOME}"
+
+# ------------------------------------------------------------------------------
+# Optionele extra pakketten (overleven herstart doordat run.sh ze opnieuw zet)
+# ------------------------------------------------------------------------------
+if bashio::config.has_value 'persistent_apk_packages'; then
+  for pkg in $(bashio::config 'persistent_apk_packages'); do
+    bashio::log.info "apk: ${pkg} installeren..."
+    apk add --no-cache "${pkg}" || bashio::log.warning "Kon apk-pakket niet installeren: ${pkg}"
+  done
+fi
+
+if bashio::config.has_value 'persistent_pip_packages'; then
+  for pkg in $(bashio::config 'persistent_pip_packages'); do
+    bashio::log.info "pip: ${pkg} installeren..."
+    pip install --break-system-packages "${pkg}" || bashio::log.warning "Kon pip-pakket niet installeren: ${pkg}"
+  done
+fi
+
+# ------------------------------------------------------------------------------
+# Bepaal wat de terminal start
+# ------------------------------------------------------------------------------
+cd /config
+
+if bashio::config.true 'auto_launch_claude'; then
+  # Toon banner, start Claude, en val terug op een shell als Claude stopt
+  LAUNCH_CMD='welcome; claude || true; echo; echo "Claude afgesloten - typ \"claude\" of \"claude-login\" om opnieuw te starten."; exec bash'
+else
+  LAUNCH_CMD='welcome; exec bash'
+fi
+
+bashio::log.info "Claude Terminal start op poort 7681..."
+bashio::log.info "Eerste keer: typ 'claude-login' in de terminal om in te loggen."
+
+# ------------------------------------------------------------------------------
+# Start de web-terminal
+#  - clickableLinks: maakt de login-URL aanklikbaar (geen kopiëren nodig)
+#  - thema + lettergrootte voor leesbaarheid
+#  - disableLeaveAlert: geen 'weet je het zeker' bij wegnavigeren
+# ------------------------------------------------------------------------------
+exec ttyd \
+  --port 7681 \
+  --interface 0.0.0.0 \
+  --writable \
+  --ping-interval 30 \
+  --client-option fontSize=14 \
+  --client-option 'theme={"background":"#1e1e2e","foreground":"#cdd6f4"}' \
+  --client-option disableLeaveAlert=true \
+  bash -lc "${LAUNCH_CMD}"
