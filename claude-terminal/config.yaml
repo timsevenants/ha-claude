@@ -1,6 +1,6 @@
 name: "Claude Terminal"
 description: "Web terminal met Anthropic's Claude Code CLI en persistente login"
-version: "1.1.0"
+version: "1.1.1"
 slug: "claude_terminal"
 init: false
 

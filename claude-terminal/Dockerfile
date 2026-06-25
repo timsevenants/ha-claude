@@ -22,8 +22,10 @@ RUN apk add --no-cache \
     py3-aiohttp \
     py3-yaml \
     py3-beautifulsoup4 \
-    uv \
     ttyd
+
+# uv (voor 'uvx ha-mcp') via pip -> onafhankelijk van de Alpine-versie
+RUN pip install --no-cache-dir --break-system-packages uv
 
 # Claude Code CLI via npm (vermijdt musl-binary-problemen)
 RUN npm install -g @anthropic-ai/claude-code@latest \
