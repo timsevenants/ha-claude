@@ -18,9 +18,18 @@ Typ in de terminal `claude` en volg de inloglink om in te loggen met je Anthropi
 
 | Optie | Standaard | Uitleg |
 |-------|-----------|--------|
-| `auto_launch_claude` | `true` | Start Claude direct bij openen. Op `false` krijg je eerst een shell. |
+| `auto_launch_claude` | `true` | Start Claude direct bij openen. Op `false` krijg je het sessiemenu. |
+| `ha_smart_context` | `true` | Genereert een `CLAUDE.md` met info over je HA-instantie (versie, entiteiten, add-ons) zodat Claude context heeft. |
+| `enable_ha_mcp` | `true` | Registreert de `ha-mcp` MCP-server, zodat Claude direct states kan opvragen en services kan aanroepen. |
 | `persistent_apk_packages` | `[]` | Extra Alpine-pakketten die bij elke start opnieuw geïnstalleerd worden. |
 | `persistent_pip_packages` | `[]` | Extra Python-pakketten die bij elke start opnieuw geïnstalleerd worden. |
+
+## Handige commando's in de terminal
+
+- `claude-login` — begeleide login
+- `session-picker` — menu om sessies te starten/hervatten
+- `ha-context` — de HA-context opnieuw genereren
+- `welcome` — de welkomstbanner met copy-paste-tips opnieuw tonen
 
 ## Toegang
 

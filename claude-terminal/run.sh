@@ -8,17 +8,28 @@
 set -e
 
 # ------------------------------------------------------------------------------
-# Persistente opslag voor Claude-config en login
+# Persistente opslag (alles onder /data -> overleeft herstart en update)
+# HOME=/data zorgt dat ~/.claude (login + user-memory) persistent is.
 # ------------------------------------------------------------------------------
 export HOME="/data"
-export CLAUDE_CONFIG_DIR="/data/claude-config"
 export XDG_CONFIG_HOME="/data/.config"
 export XDG_DATA_HOME="/data/.local/share"
 export XDG_CACHE_HOME="/data/.cache"
-mkdir -p "${CLAUDE_CONFIG_DIR}" "${XDG_CONFIG_HOME}" "${XDG_DATA_HOME}" "${XDG_CACHE_HOME}"
+mkdir -p "${HOME}/.claude" "${XDG_CONFIG_HOME}" "${XDG_DATA_HOME}" "${XDG_CACHE_HOME}"
 
 # ------------------------------------------------------------------------------
-# Optionele extra pakketten (overleven herstart doordat run.sh ze opnieuw zet)
+# Auth-migratie: oude login-locaties overzetten naar /data/.claude
+# (handig bij overstap van een oudere add-on-versie)
+# ------------------------------------------------------------------------------
+for legacy in /config/claude-config /config/.claude /root/.claude; do
+  if [ -f "${legacy}/.credentials.json" ] && [ ! -f "${HOME}/.claude/.credentials.json" ]; then
+    bashio::log.info "Bestaande login gevonden in ${legacy}, migreren naar ${HOME}/.claude ..."
+    cp -a "${legacy}/." "${HOME}/.claude/" 2>/dev/null || true
+  fi
+done
+
+# ------------------------------------------------------------------------------
+# Optionele extra pakketten (worden bij elke start opnieuw gezet)
 # ------------------------------------------------------------------------------
 if bashio::config.has_value 'persistent_apk_packages'; then
   for pkg in $(bashio::config 'persistent_apk_packages'); do
@@ -35,15 +46,32 @@ if bashio::config.has_value 'persistent_pip_packages'; then
 fi
 
 # ------------------------------------------------------------------------------
+# Home Assistant smart context: CLAUDE.md met instantie-info genereren
+# ------------------------------------------------------------------------------
+if bashio::config.true 'ha_smart_context'; then
+  bashio::log.info "HA smart context genereren..."
+  ha-context || bashio::log.warning "Contextgeneratie mislukt (ga door zonder)."
+fi
+
+# ------------------------------------------------------------------------------
+# Home Assistant MCP-server (ha-mcp) registreren bij Claude
+# ------------------------------------------------------------------------------
+if bashio::config.true 'enable_ha_mcp'; then
+  bashio::log.info "HA MCP-server (ha-mcp) registreren..."
+  setup-ha-mcp || bashio::log.warning "MCP-registratie mislukt (ga door zonder)."
+fi
+
+# ------------------------------------------------------------------------------
 # Bepaal wat de terminal start
+#  - auto_launch_claude: direct Claude in een persistente tmux-sessie
+#  - anders: het sessiemenu (session-picker)
 # ------------------------------------------------------------------------------
 cd /config
 
 if bashio::config.true 'auto_launch_claude'; then
-  # Toon banner, start Claude, en val terug op een shell als Claude stopt
-  LAUNCH_CMD='welcome; claude || true; echo; echo "Claude afgesloten - typ \"claude\" of \"claude-login\" om opnieuw te starten."; exec bash'
+  LAUNCH_CMD='welcome; tmux new-session -A -s claude claude; echo; echo "Sessie beeindigd - typ \"session-picker\" of \"claude-login\"."; exec bash'
 else
-  LAUNCH_CMD='welcome; exec bash'
+  LAUNCH_CMD='exec session-picker'
 fi
 
 bashio::log.info "Claude Terminal start op poort 7681..."
