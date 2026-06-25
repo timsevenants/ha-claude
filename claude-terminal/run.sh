@@ -69,7 +69,8 @@ fi
 cd /config
 
 if bashio::config.true 'auto_launch_claude'; then
-  LAUNCH_CMD='welcome; tmux new-session -A -s claude claude; echo; echo "Sessie beeindigd - typ \"session-picker\" of \"claude-login\"."; exec bash'
+  # Nog niet ingelogd? Via claude-login (vangt de login-URL netjes op).
+  LAUNCH_CMD='welcome; if [ ! -f "$HOME/.claude/.credentials.json" ]; then claude-login; else tmux new-session -A -s claude claude; fi; echo; echo "Sessie beeindigd - typ \"session-picker\" of \"claude-login\"."; exec bash'
 else
   LAUNCH_CMD='exec session-picker'
 fi
